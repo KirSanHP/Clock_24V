@@ -7,6 +7,10 @@
 //#include <LiquidCrystal.h>
 #include <LiquidCrystal_I2C.h>
 
+#define MIN_CLOCK_VOLTAGE 19    //Minimum voltage required for stable clock work
+#define BTN_IGNORE_TIME 30      //Time to ignore button bounce
+#define MENU_WAIT_TIME 20000    //Time from last button action to return to main screen
+
 #define BTN_RIGHT_PIN 14   //A0
 #define BTN_LEFT_PIN 15    //A1
 #define BTN_SELECT_PIN 16  //A2
@@ -14,9 +18,7 @@
 
 #define HOUR_ADD 0              //address in EEPROM for saving previous hour arrow position, 1 byte
 #define MIN_ADD 1               //address in EEPROM for saving previous minute arrow position, 1 byte
-#define MIN_CLOCK_VOLTAGE 19    //Minimum voltage required for stable clock work
-#define BTN_IGNORE_TIME 30      //Time to ignore button bounce
-#define MENU_WAIT_TIME 20000    //Time from last button action to return to main screen
+#define SWAP_OUTPUTS_ADD 2              //Are outputs swapped or not
 
 struct Btn {
   byte pin;
@@ -24,7 +26,6 @@ struct Btn {
   bool wasPressed;
   unsigned long pressMillis;    //Moment, when the button was pressed
   unsigned long currentMillis;
-//  byte time;
   bool front;
   void check() {
     isPressed = !digitalRead (pin);
@@ -83,6 +84,7 @@ byte out1pin = 16;     //A2
 byte out2pin = 17;     //A3
 byte clock_h = 0;
 byte clock_m = 0;
+bool swap_outputs = false;
 
 Btn btnRight = {BTN_RIGHT_PIN};
 Btn btnLeft = {BTN_LEFT_PIN};
@@ -107,12 +109,19 @@ void setup() {
   if (EEPROM.get (HOUR_ADD, clock_h) == 255) {  // menu = enter arrows position
     disp.menu = ENTER_ARROWS_POSITION;
     work = false;
+//-------- move this to "Enter arrows position"
+    swap_outputs = false;
+    EEPROM.put (SWAP_OUTPUTS_ADD, swap_outputs);
+    
     clock_h = 0;
     clock_m = 0;
   }
   else {
     clock_h = EEPROM.get (HOUR_ADD, clock_h);
     clock_m = EEPROM.get (MIN_ADD, clock_m);
+    swap_outputs = EEPROM.get (SWAP_OUTPUTS_ADD, swap_outputs);
+    if (swap_outputs)
+      swapOutputs();
   }
   btnRight.check();
   btnLeft.check();
